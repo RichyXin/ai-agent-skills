@@ -15,34 +15,70 @@ allowed-tools:
 
 这是一个统一的跨模型、跨平台任务记录工具，用于实时记录你接收到的 Prompt 以及你最终的产出。
 
-## 核心工作流 (强制要求)
+## ⚠️ OpenCode 专用工作流 (重要)
 
-在处理任何涉及修改代码、深入分析等复杂任务时，**必须**严格遵循以下“两步走”记录法：
+在 OpenCode 中，由于无法保持 task_id 的上下文状态，**必须使用 `record` 命令一次性记录完整任务**。
 
-### 第一步：实时记录任务开始 (Start)
-当你明确了用户的需求和要执行的任务后，在执行任何实际操作（修改文件、分析日志等）之前，**立刻**调用以下 Bash 命令记录任务的开始。
+### OpenCode 使用方法
+
+任务完成后，使用 `session_id` 作为 `task_id`，一次性记录：
 
 ```bash
-python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py start --task-name "简短的任务标题" --prompt "用户的原始完整Prompt" --project "当前项目的工程名" --model "你当前使用的模型名(如Gemini 1.5 Pro)" --user "你的身份标识(如Gemini-dewei-ding)"
+python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py record \
+  --task-name "简短的任务标题" \
+  --prompt "用户的原始完整Prompt" \
+  --output "任务完成总结（修改了哪些文件、解决了什么问题）" \
+  --project "项目名称" \
+  --agent "模型名称(如GLM-5)" \
+  --source "OpenCode" \
+  --task-id "ses_xxx"  # 使用当前会话的 session_id
 ```
-*执行成功后，你会得到一个 `TASK_ID`。你必须在上下文中记住这个 ID。*
 
-### 第二步：任务完成后记录产出总结 (End)
-当你完成了所有修改、代码提交、或者分析并输出结果给用户之后，调用以下命令记录最终的产出。
+**参数说明**：
+- `--source "OpenCode"`: 标注任务来源为 OpenCode 平台（必填）
+- `--task-id`: 使用当前会话的 session_id（格式：`ses_xxx`）
 
+### 如何获取 session_id
+
+在 OpenCode 中，session_id 是当前会话的唯一标识，格式为 `ses_xxx`。你可以在对话开始时看到它，或者从系统提示中获取。
+
+---
+
+## Gemini 专用工作流 (两步走)
+
+在 Gemini 中，可以使用 hook 自动触发，或手动执行两步走：
+
+### 第一步：记录任务开始
 ```bash
-python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py end --task-id "第一步获取的TASK_ID" --output "简明扼要地总结你做了什么（修改了哪些文件、解决了什么Bug等）"
-### 第三步（新增）：直接记录已完成的任务 (Record)
-当你需要记录一个已经完成的任务（例如任务已经开始但忘记记录，或者想一次性记录完整信息）时，使用 `record` 命令。
-
-```bash
-python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py record --task-name "字符串资源整理" --prompt "用户的原始完整Prompt" --output "任务完成总结..." --project "CardiffSystemUI" --model "Claude" --user "rentianxin" --task-id "ses_352611a33ffeou6aMvroKwbcDx"
+python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py start --task-name "任务标题" --prompt "用户的Prompt" --project "项目名" --agent "Gemini"
 ```
-*注意：`--task-id` 是可选的，如果不提供会自动生成。可以使用session ID作为task-id。*
 
+### 第二步：记录产出总结
+```bash
+python3 /home/rentianxin/.config/opencode/mega-tools/ai_task_logger/ai_task_logger.py end --task-id "获取的TASK_ID" --output "产出总结"
+```
 
+---
 
 ## MCP 集成说明
+
 对于 Claude 或 Codex/Cursor，可以通过 MCP Server 集成该工具：
-MCP Server 路径: `/home/rentianxin/.config/opencode/mega-tools/ai_task_logger/mcp_server.py`
-使用工具: `record_task_start` 和 `record_task_end`
+- MCP Server 路径: `/home/rentianxin/.config/opencode/mega-tools/ai_task_logger/mcp_server.py`
+- 使用工具: `record_task_start` 和 `record_task_end`
+
+---
+
+## 日志格式示例
+
+```markdown
+### [14:30:25] [GLM-5[OpenCode]] [CardiffSystemUI] 任务: 修复字符串资源冲突 <!-- TASK_ID: ses_abc123 -->
+- **Prompt**:
+    用户的原始 Prompt 内容
+- **主要产出**: 
+    修改了 strings.xml，解决了资源冲突问题
+----------------------------------------
+```
+
+**来源标注说明**：
+- `[GLM-5]` - 无来源标注，可能是 Gemini 或其他平台
+- `[GLM-5[OpenCode]]` - 明确标注来自 OpenCode 平台
